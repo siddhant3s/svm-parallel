@@ -200,7 +200,7 @@ class SMO(SVM):
             ]
         if not candidates:
             return -1
-        return min(candidates, key = lambda x: x[0])[1]
+        return max(candidates, key = lambda x: x[0])[1]
     def __examine_example(self, i2):
         p2 = self.X[i2]
         y2 = self.y[i2]
@@ -542,7 +542,6 @@ if __name__ == "__main__" or True:
         plot_contour(X_train[y_train==1], X_train[y_train==-1], clf)
 
     from time import time
-    test_dataset()
     t1 =test_dataset_parallel()
     t2 = test_dataset_parallel(4)
     print "Non-parallel time:", t1
