@@ -6,6 +6,7 @@ import pylab as pl
 import random
 import sys
 from multiprocessing import Pool
+log_result = {}
 def linear_kernel(x1, x2):
     return np.dot(x1, x2)
 
@@ -227,7 +228,7 @@ class SMO(SVM):
                 else:
                     bounded_points.append(i1)
             # if still take_step did not succeed we try rest of points
-            for i1 in bounded_points:
+            for i1 in all_points:
                 if self.__take_step(i1, i2):
                     return True
 
@@ -283,8 +284,8 @@ class SMO(SVM):
 if __name__ == "__main__" or True:
     import pylab as p
     def get_dataset_data():
-        ds_file = open('heart_scale') #open(sys.argv[1])
-        neglected_index = [11]
+        ds_file = open('breast_cancer_scale') #open(sys.argv[1])
+        neglected_index = []
         ds_raw = ds_file.readlines()
         data_set = []
         data_set_pos = []
@@ -449,7 +450,7 @@ if __name__ == "__main__" or True:
 
         X = np.array(X)
         y = np.array(y)
-        clf = SVM(C=1.0)
+        clf = SMO(C=1.0)
         clf.fit(X, y)
         return clf
     def split_seq(seq, size):
@@ -473,12 +474,9 @@ if __name__ == "__main__" or True:
             return 0
         work_split = split_seq(zip(X_train, y_train), n_process)
         pool = Pool(processes=n_process)
-        stdout = sys.stdout
-        sys.stdout = NullDevice()
         t1 = time()
         result = pool.map(worker, work_split)
         total_time = time() - t1
-        sys.stdout = stdout
         print sum([x.b for x in result])
         print sum([x.w for x in result])
         X_new =  np.concatenate([x.sv for x in result])
@@ -489,8 +487,15 @@ if __name__ == "__main__" or True:
         else:
             clf = result[0]
             orig_X, orig_y = get_train_dataset_data()
+            print "Total Pos:", orig_y.tolist().count(1)
+            print "Total Neg:", orig_y.tolist().count(-1)
             y_predict = result[0].predict(orig_X)
+            right_predictions =  y_predict[y_predict == orig_y]
+            log_result['pos_predict_right']=right_predictions.tolist().count(1)
+            log_result['neg_predict_right']= right_predictions.tolist().count(-1)
             correct = np.sum(y_predict == orig_y)
+            log_result['n_correct'] = correct
+            log_result['n_sample'] = len(y_predict)
             print "%d out of %d predictions correct" % (correct, len(y_predict))
             
         return total_time
@@ -542,8 +547,15 @@ if __name__ == "__main__" or True:
         plot_contour(X_train[y_train==1], X_train[y_train==-1], clf)
 
     from time import time
+    log_file = open('log_file', 'a+')
     t1 =test_dataset_parallel()
+    log_result['time_taken'] = t1
+    log_file.write( ', '.join(map(str,log_result.values())) + ', ')
+    log_result = {}
     t2 = test_dataset_parallel(4)
+    log_result['time_taken'] = t2
+    log_file.write( ', '.join(map(str,log_result.values())) + '\n')
+    print ', '.join(map(str,log_result.values()))
     print "Non-parallel time:", t1
     print "Paralel time:", t2
     print "Improvement:", t1/t2, "X faster"
